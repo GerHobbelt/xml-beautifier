@@ -11,13 +11,27 @@ const isSelfClosingTag = str => /<[^>]+\/>/.test(str);
 const isOpeningTag = str => isTag(str) && !isClosingTag(str) && !isSelfClosingTag(str) && !isXMLDeclaration(str);
 
 module.exports = (xml, config = {}) => {
-  let { indentor, textNodesOnSameLine, emptyNodesOnSameLine } = config;
+  let {
+    indentor,
+    textNodesOnSameLine,
+    emptyNodesOnSameLine
+  } = config;
   let depth = 0;
   const indicesToRemove = [];
   indentor = indentor || '    ';
 
   const rawResult = lexer(xml).map((element, i, arr) => {
-    const { value, type } = element;
+    let {
+      value,
+      type
+    } = element;
+
+    if (type === 'Text') {
+      value = value.trim();
+    }
+
+    //console.log(i, depth, type, value);
+
     if (type === 'ClosingTag') {
       depth--;
     }
@@ -26,34 +40,36 @@ module.exports = (xml, config = {}) => {
     let line = indentation + value;
 
     if (type === 'OpeningTag') {
+      // TODO: split off attributes:
+      //console.log(i, depth, type, value);
       depth++;
     }
 
     if (textNodesOnSameLine) {
       // Lookbehind for [OpeningTag][Text][ClosingTag]
-      const oneBefore = arr[i-1];
-      const twoBefore = arr[i-2];
+      const oneBefore = arr[i - 1];
+      const twoBefore = arr[i - 2];
 
       if (type === "ClosingTag" && oneBefore.type === "Text" && twoBefore.type === "OpeningTag") {
         // collapse into a single line
         line = `${indentation}${twoBefore.value}${oneBefore.value}${value}`;
-        indicesToRemove.push(i-2, i-1);
+        indicesToRemove.push(i - 2, i - 1);
       }
     }
 
     if (emptyNodesOnSameLine) {
       // Lookbehind for [OpeningTag][Text][ClosingTag]
-      const oneBefore = arr[i-1];
+      const oneBefore = arr[i - 1];
 
       if (type === "ClosingTag" && oneBefore.type === "OpeningTag") {
         // collapse into a single line
         line = `${indentation}${oneBefore.value}${value}`;
-        indicesToRemove.push(i-1);
+        indicesToRemove.push(i - 1);
       }
     }
 
     return line;
-  })
+  });
 
   indicesToRemove.forEach(idx => rawResult[idx] = null);
 
@@ -69,7 +85,7 @@ function lexer(xmlStr) {
       value,
       type: getType(value)
     };
-  })
+  });
 }
 
 // Helpers
@@ -79,9 +95,9 @@ function getType(str) {
     return 'ClosingTag';
   }
   
-   if (isXMLDeclaration(str)) {
-     return 'XMLDeclaration';
-   }
+  if (isXMLDeclaration(str)) {
+    return 'XMLDeclaration';
+  }
 
   if (isOpeningTag(str)) {
     return 'OpeningTag';

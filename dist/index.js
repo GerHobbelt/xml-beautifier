@@ -25,10 +25,16 @@ module.exports = (xml, config = {}) => {
   const indicesToRemove = [];
   indentor = indentor || '    ';
   const rawResult = lexer(xml).map((element, i, arr) => {
-    const {
+    let {
       value,
       type
     } = element;
+
+    if (type === 'Text') {
+      value = value.trim();
+    }
+
+    //console.log(i, depth, type, value);
 
     if (type === 'ClosingTag') {
       depth--;
@@ -38,6 +44,8 @@ module.exports = (xml, config = {}) => {
     let line = indentation + value;
 
     if (type === 'OpeningTag') {
+      // TODO: split off attributes:
+      //console.log(i, depth, type, value);
       depth++;
     }
 

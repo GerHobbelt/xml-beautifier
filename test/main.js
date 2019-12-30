@@ -1,5 +1,5 @@
 const beautify = require('../src/index');
-const fs = require('fs')
+const fs = require('fs');
 
 
 describe("xml-beautifier", () => {
@@ -46,6 +46,18 @@ describe("xml-beautifier", () => {
         foo bar
     </a>
 </div>`
+
+    expect(beautify(ori)).toEqual(expected)
+  })
+
+  it('should indent the xml declaration correctly', () => {
+    const ori = '<?xml version="1.0"?><div><span></span></div>';
+    const expected =
+`<?xml version="1.0"?>
+<div>
+    <span>
+    </span>
+</div>`;
 
     expect(beautify(ori)).toEqual(expected)
   })

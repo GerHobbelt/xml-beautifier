@@ -9,21 +9,71 @@ const isClosingTag = str => /<\/+[^>]+>/.test(str);
 const isSelfClosingTag = str => /<[^>]+\/>/.test(str);
 const isOpeningTag = str => isTag(str) && !isClosingTag(str) && !isSelfClosingTag(str) && !isXMLDeclaration(str);
 
-module.exports = (xml, indent) => {
-  let depth = 0;
-  indent = indent || '    ';
+module.exports = (xml, config = {}) => {
+  let { indentor, textNodesOnSameLine } = config
+  let depth = 0
+  const indicesToRemove = []
+  indentor = indentor || '    '
 
-  return splitOnTags(xml).map(item => {
-    if (isClosingTag(item)) {
+  const rawResult = lexer(xml).map((element, i, arr) => {
+    const { value, type } = element
+    if (type === 'ClosingTag') {
       depth--;
     }
 
-    const line = repeat(indent, depth) + item;
+    let indentation = repeat(indentor, depth)
+    let line = indentation + value;
 
-    if (isOpeningTag(item)) {
+    if (type === 'OpeningTag') {
       depth++;
     }
 
+    if(textNodesOnSameLine) {
+      // Lookbehind for [OpeningTag][Text][ClosingTag]
+      const oneBefore = arr[i-1]
+      const twoBefore = arr[i-2]
+
+      if(type === "ClosingTag" && oneBefore.type === "Text" && twoBefore.type === "OpeningTag") {
+        // collapse into a single line
+        line = `${indentation}${twoBefore.value}${oneBefore.value}${value}`
+        indicesToRemove.push(i-2, i-1)
+      }
+    }
+
     return line;
-  }).join('\n');
+  })
+
+  indicesToRemove.forEach(idx => rawResult[idx] = null)
+
+  return rawResult
+    .filter(val => !!val)
+    .join('\n')
 };
+
+function lexer(xmlStr) {
+  const values = splitOnTags(xmlStr)
+  return values.map(value => {
+    return {
+      value,
+      type: getType(value)
+    }
+  })
+}
+
+// Helpers
+
+function getType(str) {
+  if(isClosingTag(str)) {
+    return 'ClosingTag'
+  }
+
+  if(isOpeningTag(str)) {
+    return 'OpeningTag'
+  }
+
+  if(isSelfClosingTag(str)) {
+    return 'SelfClosingTag'
+  }
+
+  return 'Text'
+}

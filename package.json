@@ -7,6 +7,7 @@
   "scripts": {
     "build": "babel src --out-dir dist",
     "prepublish-orig": "npm run build",
+    "pub": "npm publish --access public",
     "release-orig": "release-it",
     "test": "npm run build && jest test"
   },
